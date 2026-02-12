@@ -4,6 +4,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import * as React from "react";
+import { LogOut } from "lucide-react";
+import { useAuth } from "@/components/auth-provider";
 
 type NavLeaf = {
   kind: "leaf";
@@ -89,10 +91,16 @@ const NAV: NavItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { logout } = useAuth();
   const [collapsed, setCollapsed] = React.useState(false);
   const [openGroups, setOpenGroups] = React.useState<Record<string, boolean>>({
     Audience: true,
   });
+
+  // Hide sidebar on login page
+  if (pathname === "/login") {
+    return null;
+  }
 
   const widthClass = collapsed ? "w-[72px]" : "w-[260px]";
 
@@ -127,7 +135,7 @@ export function Sidebar() {
         </button>
       </div>
 
-      <nav className="px-3 pb-6">
+      <nav className="flex h-[calc(100%-4rem)] flex-col justify-between px-3 pb-6">
         <ul className="space-y-1">
           {NAV.map((item) => {
             if (item.kind === "leaf") {
@@ -253,6 +261,29 @@ export function Sidebar() {
             );
           })}
         </ul>
+
+        {/* Logout button at the bottom */}
+        <button
+          type="button"
+          onClick={logout}
+          className={[
+            "mt-4 flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+            "text-red-600 hover:bg-red-50 hover:text-red-700",
+            collapsed ? "justify-center px-2" : "",
+          ].join(" ")}
+        >
+          <span
+            className={[
+              "grid h-9 w-9 place-items-center rounded-md",
+              "text-red-600 group-hover:text-red-700",
+            ].join(" ")}
+          >
+            <LogOut className="h-5 w-5" />
+          </span>
+          {!collapsed && (
+            <span className="min-w-0 flex-1 truncate font-medium">Logout</span>
+          )}
+        </button>
       </nav>
     </aside>
   );

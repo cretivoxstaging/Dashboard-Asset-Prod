@@ -73,6 +73,9 @@ export function ReportTableClient() {
   const [createSuccess, setCreateSuccess] = useState<string | null>(null);
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [updatingStatusId, setUpdatingStatusId] = useState<
+    number | string | null
+  >(null);
   type AssetRow = { assetID: string; qty: string };
   const [form, setForm] = useState({
     borrowID: "",
@@ -81,7 +84,7 @@ export function ReportTableClient() {
     department: "",
     date: "",
     return_date: "",
-    status: "",
+    status: "active",
   });
   const [assetRows, setAssetRows] = useState<AssetRow[]>([
     { assetID: "", qty: "" },
@@ -154,6 +157,35 @@ export function ReportTableClient() {
       throw new Error(getErrorMessage(json, res.status));
     }
     return normalizeBorrows(json);
+  }
+
+  async function handleStatusChange(row: BorrowItem, newStatus: string) {
+    const id = row.borrowingId ?? row.id;
+    if (id == null || id === undefined) return;
+    setUpdatingStatusId(id);
+    try {
+      const res = await fetch(`/api/borrow/${encodeURIComponent(String(id))}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const text = await res.text();
+      const json = text ? (JSON.parse(text) as unknown) : null;
+      if (!res.ok) {
+        throw new Error(getErrorMessage(json, res.status));
+      }
+      setItems((prev) =>
+        prev.map((item) =>
+          (item.borrowingId ?? item.id) === id
+            ? { ...item, status: newStatus }
+            : item
+        )
+      );
+    } catch {
+      // Silently fail or could set error state
+    } finally {
+      setUpdatingStatusId(null);
+    }
   }
 
   // Fetch all employees once when component mounts
@@ -380,7 +412,7 @@ export function ReportTableClient() {
                   department: "",
                   date: "",
                   return_date: "",
-                  status: "",
+                  status: "active",
                 });
                 setAssetRows([{ assetID: "", qty: "" }]);
                 setEmployeeSearchQuery("");
@@ -450,7 +482,7 @@ export function ReportTableClient() {
                       );
                       formData.append("date", dateStr);
                       formData.append("return_date", returnStr);
-                      formData.append("status", form.status.trim() || "");
+                      formData.append("status", form.status.trim() || "active");
 
                       const res = await fetch("/api/borrow", {
                         method: "POST",
@@ -484,7 +516,7 @@ export function ReportTableClient() {
                         department: form.department,
                         date: form.date,
                         return_date: form.return_date,
-                        status: form.status,
+                        status: form.status.trim() || "active",
                         item_name: body.item_name ?? asset?.item_name,
                       });
                     }
@@ -629,19 +661,6 @@ export function ReportTableClient() {
                         setForm((p) => ({ ...p, return_date: e.target.value }))
                       }
                       className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm text-black outline-none focus:border-black focus:ring-2 focus:ring-black/10"
-                    />
-                  </label>
-                  <label className="space-y-1.5">
-                    <div className="text-xs font-medium text-zinc-700">
-                      Status
-                    </div>
-                    <input
-                      value={form.status}
-                      onChange={(e) =>
-                        setForm((p) => ({ ...p, status: e.target.value }))
-                      }
-                      className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm text-black outline-none focus:border-black focus:ring-2 focus:ring-black/10"
-                      placeholder="Pending"
                     />
                   </label>
                   <div className="space-y-3 sm:col-span-2">
@@ -859,8 +878,36 @@ export function ReportTableClient() {
                         <td className="px-5 py-3.5 text-zinc-700">
                           {row.return_date ?? "-"}
                         </td>
-                        <td className="px-5 py-3.5 text-zinc-700">
-                          {row.status ?? "-"}
+                        <td className="px-5 py-3.5">
+                          {(() => {
+                            const value =
+                              row.status === "active" ||
+                              row.status === "returned"
+                                ? row.status
+                                : row.status || "active";
+
+                            const colorClasses =
+                              value === "returned"
+                                ? "border-blue-200 bg-blue-50 text-blue-700"
+                                : "border-emerald-200 bg-emerald-50 text-emerald-700";
+
+                            return (
+                              <select
+                                value={value}
+                                onChange={(e) =>
+                                  handleStatusChange(row, e.target.value)
+                                }
+                                disabled={
+                                  updatingStatusId ===
+                                  (row.borrowingId ?? row.id)
+                                }
+                                className={`rounded-lg px-2.5 py-1.5 text-sm outline-none focus:ring-1 focus:ring-black/10 disabled:opacity-60 ${colorClasses}`}
+                              >
+                                <option value="active">Active</option>
+                                <option value="returned">Returned</option>
+                              </select>
+                            );
+                          })()}
                         </td>
                       </tr>
                     ))
