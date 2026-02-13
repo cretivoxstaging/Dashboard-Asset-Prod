@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 import { LogOut } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
@@ -91,11 +91,17 @@ const NAV: NavItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { logout } = useAuth();
   const [collapsed, setCollapsed] = React.useState(false);
   const [openGroups, setOpenGroups] = React.useState<Record<string, boolean>>({
     Audience: true,
   });
+
+  const handleLogout = () => {
+    logout();
+    router.replace("/login");
+  };
 
   // Hide sidebar on login page
   if (pathname === "/login") {
@@ -148,8 +154,8 @@ export function Sidebar() {
                     className={[
                       "group flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
                       active
-                        ? "bg-zinc-100 text-black"
-                        : "text-black hover:bg-zinc-100 hover:text-black",
+                        ? "bg-zinc-100 text-black font-bold"
+                        : "text-black hover:bg-zinc-100 hover:text-black font-semibold",
                       collapsed ? "justify-center px-2" : "",
                     ].join(" ")}
                   >
@@ -265,17 +271,17 @@ export function Sidebar() {
         {/* Logout button at the bottom */}
         <button
           type="button"
-          onClick={logout}
+          onClick={handleLogout}
           className={[
-            "mt-4 flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-            "text-red-600 hover:bg-red-50 hover:text-red-700",
+            "mt-4 flex w-full items-center gap-3 rounded-md px-3 py-1 text-sm transition-colors",
+            "text-white  hover:text-white bg-black hover:bg-gray-500",
             collapsed ? "justify-center px-2" : "",
           ].join(" ")}
         >
           <span
             className={[
               "grid h-9 w-9 place-items-center rounded-md",
-              "text-red-600 group-hover:text-red-700",
+              "text-white group-hover:text-red-700",
             ].join(" ")}
           >
             <LogOut className="h-5 w-5" />

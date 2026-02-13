@@ -67,7 +67,7 @@ export default function LoginPage() {
                 <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl" />
               </div>
             </div>
-            <CardTitle className="text-3xl text-white font-bold tracking-tight bg-linear-to-r from-foreground to-foreground/70 bg-clip-text ">
+            <CardTitle className="text-3xl text-black font-bold tracking-tight bg-linear-to-r from-foreground to-foreground/70 bg-clip-text ">
               Welcome Back
             </CardTitle>
             <CardDescription className="text-base">

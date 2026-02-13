@@ -3,7 +3,16 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { RefreshCw, Plus, Search, Trash2 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { RefreshCw, Plus, Search, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100, 200];
 
 type BorrowItem = {
   id?: number | string;
@@ -73,6 +82,8 @@ export function ReportTableClient() {
   const [createSuccess, setCreateSuccess] = useState<string | null>(null);
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [updatingStatusId, setUpdatingStatusId] = useState<
     number | string | null
   >(null);
@@ -356,16 +367,27 @@ export function ReportTableClient() {
     });
   }, [items, searchQuery]);
 
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const safePage = Math.min(Math.max(1, currentPage), totalPages);
+  const paginatedRows = useMemo(() => {
+    const start = (safePage - 1) * pageSize;
+    return rows.slice(start, start + pageSize);
+  }, [rows, pageSize, safePage]);
+
+  useEffect(() => {
+    setCurrentPage((p) => Math.min(p, totalPages));
+  }, [totalPages, searchQuery, pageSize]);
+
   return (
     <div className="min-h-screen bg-white text-black">
       <div className="mx-auto max-w-full px-4 py-8 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight text-black">
-            Report Peminjaman
+            Loan Report
           </h1>
           <p className="mt-1 text-sm text-zinc-600">
-            Laporan dan daftar peminjaman asset
+            Reports and list of asset loans
           </p>
         </div>
 
@@ -436,10 +458,10 @@ export function ReportTableClient() {
               if (e.target === e.currentTarget) setAddOpen(false);
             }}
           >
-            <div className="w-full max-w-xl rounded-2xl border border-zinc-200 bg-white p-0 shadow-xl">
-              <div className="flex items-center justify-between border-b border-zinc-200 bg-zinc-50 px-5 py-4">
+            <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-zinc-200 bg-white p-0 shadow-xl">
+              <div className="flex items-center justify-between border-b border-zinc-200 bg-zinc-50 px-5 py-4 rounded-t-2xl">
                 <div className="text-base font-semibold text-black">
-                  Tambah Peminjaman
+                  Add Borrow 
                 </div>
               </div>
               <form
@@ -829,14 +851,13 @@ export function ReportTableClient() {
                     <th className="px-5 py-4 font-semibold">Qty</th>
                     <th className="px-5 py-4 font-semibold">Name</th>
                     <th className="px-5 py-4 font-semibold">Branch</th>
-                    <th className="px-5 py-4 font-semibold">Department</th>
                     <th className="px-5 py-4 font-semibold">Date</th>
                     <th className="px-5 py-4 font-semibold">Return Date</th>
                     <th className="px-5 py-4 font-semibold">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-100">
-                  {rows.length === 0 ? (
+                  {paginatedRows.length === 0 ? (
                     <tr>
                       <td
                         colSpan={10}
@@ -846,13 +867,13 @@ export function ReportTableClient() {
                       </td>
                     </tr>
                   ) : (
-                    rows.map((row, idx) => (
+                    paginatedRows.map((row, idx) => (
                       <tr
                         key={`${row.id ?? row.borrowID ?? idx}-${idx}`}
                         className="bg-white hover:bg-zinc-50/80 transition-colors"
                       >
                         <td className="px-5 py-3.5 font-mono text-xs text-zinc-600">
-                          {row.borrowingId ?? row.id ?? "-"}
+                          {(safePage - 1) * pageSize + idx + 1}
                         </td>
                         <td className="px-5 py-3.5 font-medium text-black">
                           {row.borrowID ?? "-"}
@@ -867,10 +888,7 @@ export function ReportTableClient() {
                           {row.name ?? "-"}
                         </td>
                         <td className="px-5 py-3.5 text-zinc-700">
-                          {row.branch ?? "-"}
-                        </td>
-                        <td className="px-5 py-3.5 text-zinc-700">
-                          {row.department ?? "-"}
+                          {row.branch ?? "-"} - {row.department ?? "-"}
                         </td>
                         <td className="px-5 py-3.5 text-zinc-700">
                           {row.date ?? "-"}
@@ -915,6 +933,72 @@ export function ReportTableClient() {
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination Controls */}
+            {rows.length > 0 ? (
+              <div className="flex flex-wrap items-center justify-between gap-4 border-t border-zinc-200 bg-zinc-50/50 px-5 py-4">
+                <div className="flex items-center gap-2 text-sm text-zinc-700">
+                  <span>Showing</span>
+                  <Select
+                    value={String(pageSize)}
+                    onValueChange={(v) => {
+                      setPageSize(Number(v));
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="h-9 w-20 rounded-lg border border-zinc-300 bg-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PAGE_SIZE_OPTIONS.map((n) => (
+                        <SelectItem key={n} value={String(n)}>
+                          {n}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <span>entries</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={safePage <= 1}
+                    className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-black hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <ChevronLeft className="mr-1 inline h-4 w-4" />
+                    Previous
+                  </button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setCurrentPage(p)}
+                        className={`min-w-9 rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                          p === safePage
+                            ? "border-black bg-black text-white"
+                            : "border-zinc-300 bg-white text-black hover:bg-zinc-50"
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    )
+                  )}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCurrentPage((p) => Math.min(totalPages, p + 1))
+                    }
+                    disabled={safePage >= totalPages}
+                    className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-black hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Next
+                    <ChevronRight className="ml-1 inline h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
         )}
       </div>

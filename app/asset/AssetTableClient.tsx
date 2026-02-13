@@ -3,7 +3,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { RefreshCw, Plus, Search } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { RefreshCw, Plus, Search, ChevronLeft, ChevronRight } from "lucide-react";
+
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100, 200];
 
 type AssetItem = {
   id?: number | string;
@@ -74,6 +83,8 @@ export function AssetTableClient() {
   const [pictureFile, setPictureFile] = useState<File | null>(null);
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [form, setForm] = useState({
     item_name: "",
     category: "",
@@ -143,7 +154,20 @@ export function AssetTableClient() {
       );
     });
   }, [items, searchQuery]);
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const safePage = Math.min(Math.max(1, currentPage), totalPages);
+  const paginatedRows = useMemo(() => {
+    const start = (safePage - 1) * pageSize;
+    return rows.slice(start, start + pageSize);
+  }, [rows, pageSize, safePage]);
+
   const isEdit = editId !== null && editId !== undefined;
+
+  // Reset to page 1 when search or pageSize changes
+  useEffect(() => {
+    setCurrentPage((p) => Math.min(p, totalPages));
+  }, [totalPages, searchQuery, pageSize]);
 
   return (
     <div className="min-h-screen bg-white text-black">
@@ -151,17 +175,17 @@ export function AssetTableClient() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight text-black">
-            Management Asset
+            Asset Management
           </h1>
           <p className="mt-1 text-sm text-zinc-600">
-            Kelola daftar asset perusahaan Anda
+            Organize and maintain your asset records
           </p>
         </div>
 
         {/* Actions bar */}
         <div className="mb-4 flex flex-wrap items-center gap-4 rounded-xl px-2 py-2 justify-between">
           <div className="relative flex-1 max-w-60 -ml-1.5">
-            <Search className="absolute left-3 top-1/2 h- w-4 -translate-y-1/2 text-zinc-500" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
             <Input
               type="search"
               placeholder="Search assets..."
@@ -223,8 +247,8 @@ export function AssetTableClient() {
               if (e.target === e.currentTarget) setAddOpen(false);
             }}
           >
-            <div className="w-full max-w-xl rounded-2xl border border-zinc-200 bg-white p-0 shadow-xl">
-              <div className="flex items-center justify-between border-b border-zinc-200 bg-zinc-50 px-5 py-4">
+            <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-zinc-200 bg-white p-0 shadow-xl">
+              <div className="flex items-center justify-between border-b border-zinc-200 bg-zinc-50 px-5 py-4 rounded-t-2xl">
                 <div className="text-base font-semibold text-black">
                   {isEdit ? "Edit Asset" : "Add New Asset"}
                 </div>
@@ -458,7 +482,7 @@ export function AssetTableClient() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-100">
-                  {rows.length === 0 ? (
+                  {paginatedRows.length === 0 ? (
                     <tr>
                       <td
                         colSpan={8}
@@ -468,13 +492,13 @@ export function AssetTableClient() {
                       </td>
                     </tr>
                   ) : (
-                    rows.map((a, idx) => (
+                    paginatedRows.map((a, idx) => (
                       <tr
                         key={`${a.id ?? "no-id"}-${idx}`}
                         className="bg-white hover:bg-zinc-50/80 transition-colors"
                       >
                         <td className="px-5 py-3.5 font-mono text-xs text-zinc-600">
-                          {a.id ?? "-"}
+                          {(safePage - 1) * pageSize + idx + 1}
                         </td>
                         <td className="px-5 py-3.5">
                           <div className="flex items-center gap-3">
@@ -543,6 +567,70 @@ export function AssetTableClient() {
                 </tbody>
               </table>
             </div>
+            {rows.length > 0 ? (
+              <div className="flex flex-wrap items-center justify-between gap-4 border-t border-zinc-200 bg-zinc-50/50 px-5 py-4">
+                <div className="flex items-center gap-2 text-sm text-zinc-700">
+                  <span>Showing</span>
+                  <Select
+                    value={String(pageSize)}
+                    onValueChange={(v) => {
+                      setPageSize(Number(v));
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="h-9 w-20 rounded-lg border border-zinc-300 bg-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PAGE_SIZE_OPTIONS.map((n) => (
+                        <SelectItem key={n} value={String(n)}>
+                          {n}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <span>entries</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={safePage <= 1}
+                    className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-black hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <ChevronLeft className="mr-1 inline h-4 w-4" />
+                    Previous
+                  </button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setCurrentPage(p)}
+                        className={`min-w-[2.25rem] rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                          p === safePage
+                            ? "border-black bg-black text-white"
+                            : "border-zinc-300 bg-white text-black hover:bg-zinc-50"
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    )
+                  )}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCurrentPage((p) => Math.min(totalPages, p + 1))
+                    }
+                    disabled={safePage >= totalPages}
+                    className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-black hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Next
+                    <ChevronRight className="ml-1 inline h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
         )}
       </div>
