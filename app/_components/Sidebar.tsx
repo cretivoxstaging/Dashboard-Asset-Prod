@@ -76,7 +76,7 @@ const NAV: NavItem[] = [
   {
     kind: "leaf",
     href: "/report",
-    label: "Report",
+    label: "Borrow Report",
     icon: (
       <Image
         src="/sidebar/report.svg"

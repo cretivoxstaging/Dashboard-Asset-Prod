@@ -10,7 +10,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RefreshCw, Plus, Search, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  RefreshCw,
+  Plus,
+  Search,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  CalendarIcon,
+} from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { format } from "date-fns";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100, 200];
 
@@ -82,6 +97,8 @@ export function ReportTableClient() {
   const [createSuccess, setCreateSuccess] = useState<string | null>(null);
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [updatingStatusId, setUpdatingStatusId] = useState<
@@ -189,8 +206,8 @@ export function ReportTableClient() {
         prev.map((item) =>
           (item.borrowingId ?? item.id) === id
             ? { ...item, status: newStatus }
-            : item
-        )
+            : item,
+        ),
       );
     } catch {
       // Silently fail or could set error state
@@ -350,7 +367,8 @@ export function ReportTableClient() {
   // Data lewat return_date (telat) → true
   function isOverdue(row: BorrowItem): boolean {
     const rd = row.return_date;
-    if (!rd || typeof rd !== "string" || row.status === "returned") return false;
+    if (!rd || typeof rd !== "string" || row.status === "returned")
+      return false;
     const returnTime = new Date(rd.replace(" ", "T")).getTime();
     if (Number.isNaN(returnTime)) return false;
     return Date.now() > returnTime;
@@ -371,11 +389,38 @@ export function ReportTableClient() {
       const numA = typeof idA === "number" ? idA : Number(idA);
       const numB = typeof idB === "number" ? idB : Number(idB);
       if (!Number.isNaN(numA) && !Number.isNaN(numB)) return numB - numA;
-      return String(idB).localeCompare(String(idA), undefined, { numeric: true });
+      return String(idB).localeCompare(String(idA), undefined, {
+        numeric: true,
+      });
     });
+    let filtered = list;
+    if (statusFilter && statusFilter !== "all") {
+      filtered = filtered.filter((row) => {
+        const rowStatus = String(row.status ?? "").toLowerCase();
+        if (statusFilter === "overdue") {
+          // Overdue = melewati tanggal jatuh tempo dan status masih active
+          return rowStatus === "active" && isOverdue(row);
+        }
+        return rowStatus === statusFilter.toLowerCase();
+      });
+    }
+    if (dateFilter) {
+      const filterYmd =
+        dateFilter.getFullYear() +
+        "-" +
+        String(dateFilter.getMonth() + 1).padStart(2, "0") +
+        "-" +
+        String(dateFilter.getDate()).padStart(2, "0");
+      filtered = filtered.filter((row) => {
+        const d = row.date;
+        if (!d || typeof d !== "string") return false;
+        const rowYmd = d.trim().slice(0, 10);
+        return rowYmd === filterYmd;
+      });
+    }
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return list;
-    return list.filter((row) => {
+    if (!q) return filtered;
+    return filtered.filter((row) => {
       const borrowID = String(row.borrowID ?? "").toLowerCase();
       const item_name = String(row.item_name ?? "").toLowerCase();
       const name = String(row.name ?? "").toLowerCase();
@@ -389,7 +434,7 @@ export function ReportTableClient() {
         department.includes(q)
       );
     });
-  }, [items, searchQuery]);
+  }, [items, searchQuery, statusFilter, dateFilter]);
 
   const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
   const safePage = Math.min(Math.max(1, currentPage), totalPages);
@@ -400,7 +445,7 @@ export function ReportTableClient() {
 
   useEffect(() => {
     setCurrentPage((p) => Math.min(p, totalPages));
-  }, [totalPages, searchQuery, pageSize]);
+  }, [totalPages, searchQuery, statusFilter, dateFilter, pageSize]);
 
   return (
     <div className="min-h-screen bg-white text-black">
@@ -417,15 +462,104 @@ export function ReportTableClient() {
 
         {/* Actions bar */}
         <div className="mb-4 flex flex-wrap items-center gap-4 rounded-xl px-2 py-2 justify-between">
-          <div className="relative flex-1 max-w-60 -ml-1.5">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
-            <Input
-              type="search"
-              placeholder="Search report..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 rounded-lg border border-zinc-300 bg-white"
-            />
+          <div className="flex items-center gap-3 flex-1 flex-wrap">
+            <div className="relative max-w-60 -ml-1.5">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+              <Input
+                type="search"
+                placeholder="Search report..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 rounded-lg border border-zinc-300 bg-white"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-35 rounded-lg border border-zinc-300 bg-white">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="returned">Returned</SelectItem>
+                <SelectItem value="overdue">Overdue</SelectItem>
+              </SelectContent>
+            </Select>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="min-w-30 justify-start rounded-lg border border-zinc-300 bg-white pl-3 text-left font-normal"
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4 text-zinc-500" />
+                  {dateFilter ? (
+                    format(dateFilter, "d MMMM yyyy")
+                  ) : (
+                    <span className="text-zinc-500">Date</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto h-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={dateFilter}
+                  onSelect={setDateFilter}
+                  initialFocus
+                  className="p-3"
+                  // Tambahkan modifiers untuk menandai tanggal yang memiliki data
+                  modifiers={{
+                    hasData: (date) => {
+                      // Format tanggal ke YYYY-MM-DD
+                      const dateStr = format(date, "yyyy-MM-dd");
+
+                      // Cek apakah ada data di tanggal tersebut
+                      return items.some((item) => {
+                        const itemDate = item.date;
+                        if (!itemDate || typeof itemDate !== "string")
+                          return false;
+                        return itemDate.slice(0, 10) === dateStr;
+                      });
+                    },
+                  }}
+                  modifiersClassNames={{
+                    hasData:
+                      "relative after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:h-1 after:w-1 after:rounded-full after:bg-blue-500 font-medium",
+                  }}
+                  classNames={{
+                    caption:
+                      "flex justify-center pt-1 relative items-center text-sm font-semibold",
+                    caption_label: "text-sm font-semibold",
+                    nav_button:
+                      "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
+                    nav_button_previous: "absolute left-1",
+                    nav_button_next: "absolute right-1",
+                    table: "w-full border-collapse",
+                    head_row: "flex",
+                    head_cell:
+                      "text-zinc-600 rounded-md w-9 font-medium text-xs",
+                    row: "flex w-full mt-1",
+                    cell: "text-center text-sm p-0 relative",
+                    day: "h-9 w-9 p-0 font-normal hover:bg-zinc-100 rounded-md",
+                    day_selected:
+                      "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
+                    day_today: "font-bold bg-zinc-100 text-foreground",
+                    day_outside: "text-zinc-400",
+                  }}
+                />
+                <div className="border-t border-zinc-200 p-3">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="w-full rounded-lg bg-black text-white hover:bg-zinc-800 active:scale-[0.98]"
+                    onClick={() => {
+                      setDateFilter(new Date());
+                    }}
+                  >
+                    Today
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -480,7 +614,7 @@ export function ReportTableClient() {
             <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-zinc-200 bg-white p-0 shadow-xl">
               <div className="flex items-center justify-between border-b border-zinc-200 bg-zinc-50 px-5 py-4 rounded-t-2xl">
                 <div className="text-base font-semibold text-black">
-                  Add Borrow 
+                  Add Borrow
                 </div>
               </div>
               <form
@@ -494,12 +628,10 @@ export function ReportTableClient() {
                     if (!form.borrowID.trim())
                       throw new Error("Borrow ID wajib diisi.");
                     const filledAssets = assetRows.filter(
-                      (r) => r.assetID && r.assetID.trim()
+                      (r) => r.assetID && r.assetID.trim(),
                     );
                     if (filledAssets.length === 0)
-                      throw new Error(
-                        "Minimal 1 asset wajib dipilih."
-                      );
+                      throw new Error("Minimal 1 asset wajib dipilih.");
                     const dateStr = form.date.trim()
                       ? form.date.replace("T", " ")
                       : "";
@@ -513,13 +645,13 @@ export function ReportTableClient() {
                       formData.append("borrowID", form.borrowID.trim());
                       formData.append(
                         "qty",
-                        (row.qty && row.qty.trim() ? row.qty : "1").trim()
+                        (row.qty && row.qty.trim() ? row.qty : "1").trim(),
                       );
                       formData.append("name", form.name.trim() || "");
                       formData.append("branch", form.branch.trim() || "");
                       formData.append(
                         "department",
-                        form.department.trim() || ""
+                        form.department.trim() || "",
                       );
                       formData.append("date", dateStr);
                       formData.append("return_date", returnStr);
@@ -530,9 +662,7 @@ export function ReportTableClient() {
                         body: formData,
                       });
                       const text = await res.text();
-                      const json = text
-                        ? (JSON.parse(text) as unknown)
-                        : null;
+                      const json = text ? (JSON.parse(text) as unknown) : null;
 
                       if (!res.ok) {
                         throw new Error(getErrorMessage(json, res.status));
@@ -544,7 +674,7 @@ export function ReportTableClient() {
                         item_name?: string;
                       };
                       const asset = assets.find(
-                        (a) => String(a.id) === String(row.assetID)
+                        (a) => String(a.id) === String(row.assetID),
                       );
                       newItems.push({
                         id: body.borrowingId,
@@ -562,7 +692,7 @@ export function ReportTableClient() {
                       });
                     }
                     setCreateSuccess(
-                      `${newItems.length} peminjaman berhasil dicatat.`
+                      `${newItems.length} peminjaman berhasil dicatat.`,
                     );
                     setAddOpen(false);
                     setItems((prev) => [...prev, ...newItems]);
@@ -760,7 +890,10 @@ export function ReportTableClient() {
                                     (a as any).qty ??
                                     (a as any).stock ??
                                     null;
-                                  if (possible === null || possible === undefined)
+                                  if (
+                                    possible === null ||
+                                    possible === undefined
+                                  )
                                     return true;
                                   const n = Number(possible);
                                   return Number.isFinite(n) ? n > 0 : true;
@@ -803,7 +936,7 @@ export function ReportTableClient() {
                               setAssetRows((prev) =>
                                 prev.length > 1
                                   ? prev.filter((_, i) => i !== idx)
-                                  : prev
+                                  : prev,
                               )
                             }
                             className="rounded-lg p-2.5 text-zinc-500 hover:bg-zinc-200 hover:text-red-600 disabled:opacity-40"
@@ -863,7 +996,7 @@ export function ReportTableClient() {
             <div className="overflow-x-auto">
               <table className="min-w-full w-full text-left text-sm text-black">
                 <thead>
-                  <tr className="border-b border-zinc-200 bg-gray-300 text-black">
+                  <tr className="border-b border-zinc-200 bg-black text-white">
                     <th className="px-5 py-4 font-semibold">#</th>
                     <th className="px-5 py-4 font-semibold">Borrow ID</th>
                     <th className="px-5 py-4 font-semibold">Item Name</th>
@@ -1006,7 +1139,7 @@ export function ReportTableClient() {
                       >
                         {p}
                       </button>
-                    )
+                    ),
                   )}
                   <button
                     type="button"
