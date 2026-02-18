@@ -32,6 +32,8 @@ type BorrowItem = {
   qty?: number;
   return_date?: string;
   status?: string;
+  item_name?: string;
+  name?: string;
   [key: string]: unknown;
 };
 
@@ -74,6 +76,8 @@ function normalizeBorrows(payload: unknown): BorrowItem[] {
       borrowingId: id,
       qty: data.qty,
       return_date: data.return_date,
+      item_name: data.item_name,
+      name: data.name,
       ...data,
     } as BorrowItem;
   });
@@ -128,6 +132,7 @@ export function DashboardStats() {
     returned: 0,
     active: 0,
   });
+  const [overdueList, setOverdueList] = useState<BorrowItem[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -208,6 +213,12 @@ export function DashboardStats() {
           .filter((b) => String(b.status ?? "").toLowerCase() === "active")
           .reduce((sum, b) => sum + parseQty(b.qty), 0);
         setChartReturnStatus({ returned: returnedQty, active: activeQty });
+
+        const overdue = borrows.filter((b) => {
+          const status = String(b.status ?? "").toLowerCase();
+          return status === "active" && isOverdue(b.return_date);
+        });
+        setOverdueList(overdue);
       } catch (e) {
         if (!cancelled)
           setError(e instanceof Error ? e.message : "Gagal memuat data");
@@ -342,9 +353,9 @@ export function DashboardStats() {
         })}
       </div>
       
-      {/* Donut Status & P */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-lg border border-b-4 border-gray-300 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950 ">
+      {/* Asset Status | Overdue Detail | Return Status */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="rounded-lg border border-b-4 border-black bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950 ">
           <h2 className="mb-4 text-sm font-bold text-zinc-700 dark:text-zinc-300">
             Asset Status
           </h2>
@@ -386,7 +397,56 @@ export function DashboardStats() {
           )}
         </div>
 
-        <div className="rounded-lg border border-b-4 border-gray-300 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950 ">
+        <div className="rounded-lg border border-b-4 border-black bg-white p-4 dark:border-amber-800 dark:bg-zinc-950 ">
+          <h2 className="mb-4 text-sm font-bold text-zinc-700 dark:text-zinc-300">
+            Overdue Detail
+          </h2>
+          <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">
+            Borrowers who have not returned assets past the due date
+          </p>
+          {loading ? (
+            <div className="flex h-70 items-center justify-center text-sm text-zinc-500">
+              Memuat…
+            </div>
+          ) : overdueList.length === 0 ? (
+            <div className="flex h-70 items-center justify-center text-sm text-zinc-500">
+              Tidak ada peminjaman overdue
+            </div>
+          ) : (
+            <div className="max-h-70 overflow-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="sticky top-0 border-b bg-zinc-100 dark:bg-zinc-900">
+                  <tr>
+                    <th className="py-2 pr-2 font-medium">Item</th>
+                    <th className="py-2 pr-2 font-medium text-center w-12">Qty</th>
+                    <th className="py-2 pr-2 font-medium">Nama</th>
+                    <th className="py-2 font-medium whitespace-nowrap">Due Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {overdueList.map((row, idx) => {
+                    const dueStr = row.return_date
+                      ? String(row.return_date).replace("T", " ").split(" ")[0]
+                      : "-";
+                    return (
+                      <tr
+                        key={row.borrowingId ?? row.id ?? idx}
+                        className="border-b border-zinc-100 dark:border-zinc-800"
+                      >
+                        <td className="py-2 pr-2">{row.item_name ?? "-"}</td>
+                        <td className="py-2 pr-2 text-center">{parseQty(row.qty)}</td>
+                        <td className="py-2 pr-2">{row.name ?? "-"}</td>
+                        <td className="py-2 whitespace-nowrap">{dueStr}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-lg border border-b-4 border-black bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950 ">
           <h2 className="mb-4 text-sm font-bold text-zinc-700 dark:text-zinc-300">
             Return Status
           </h2>
