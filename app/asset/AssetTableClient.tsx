@@ -577,7 +577,7 @@ export function AssetTableClient() {
             <div className="overflow-x-auto">
               <table className="min-w-full w-full text-left text-sm text-black">
                 <thead>
-                  <tr className="border-b border-zinc-200 bg-gray-300 text-black">
+                  <tr className="border-b border-zinc-200 bg-black text-white">
                     <th className="px-5 py-4 font-semibold">#</th>
                     <th className="px-5 py-4 font-semibold">Asset Name</th>
                     <th className="px-5 py-4 font-semibold">Category</th>
