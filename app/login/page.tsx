@@ -136,7 +136,7 @@ export default function LoginPage() {
                   </>
                 )}
               </Button>
-              <p className="text-xs text-white text-center mt-3 ">
+              <p className="text-xs text-black text-center mt-3 ">
                 Powered by <span className="font-bold italic">CRETECH</span>
               </p>
             </form>

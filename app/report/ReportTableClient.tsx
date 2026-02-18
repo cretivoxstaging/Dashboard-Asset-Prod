@@ -347,8 +347,32 @@ export function ReportTableClient() {
     };
   }, []);
 
+  // Data lewat return_date (telat) → true
+  function isOverdue(row: BorrowItem): boolean {
+    const rd = row.return_date;
+    if (!rd || typeof rd !== "string" || row.status === "returned") return false;
+    const returnTime = new Date(rd.replace(" ", "T")).getTime();
+    if (Number.isNaN(returnTime)) return false;
+    return Date.now() > returnTime;
+  }
+
   const rows = useMemo(() => {
-    const list = items ?? [];
+    const raw = items ?? [];
+    // Data yang lewat tanggal (overdue) paling atas, lalu urutkan ID terbesar di atas
+    const list = raw.slice().sort((a, b) => {
+      const overdueA = isOverdue(a) ? 1 : 0;
+      const overdueB = isOverdue(b) ? 1 : 0;
+      if (overdueB !== overdueA) return overdueB - overdueA; // overdue paling atas (di atas data ID terbesar/terbaru)
+      const idA = a.borrowingId ?? a.id;
+      const idB = b.borrowingId ?? b.id;
+      if (idA == null && idB == null) return 0;
+      if (idA == null) return 1;
+      if (idB == null) return -1;
+      const numA = typeof idA === "number" ? idA : Number(idA);
+      const numB = typeof idB === "number" ? idB : Number(idB);
+      if (!Number.isNaN(numA) && !Number.isNaN(numB)) return numB - numA;
+      return String(idB).localeCompare(String(idA), undefined, { numeric: true });
+    });
     const q = searchQuery.trim().toLowerCase();
     if (!q) return list;
     return list.filter((row) => {
@@ -384,10 +408,10 @@ export function ReportTableClient() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight text-black">
-            Loan Report
+            Borrow Report
           </h1>
           <p className="mt-1 text-sm text-zinc-600">
-            Reports and list of asset loans
+            Reports and list of asset
           </p>
         </div>
 
@@ -452,12 +476,7 @@ export function ReportTableClient() {
 
         {/* Modal Add Borrow */}
         {addOpen ? (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
-            onMouseDown={(e) => {
-              if (e.target === e.currentTarget) setAddOpen(false);
-            }}
-          >
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
             <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-zinc-200 bg-white p-0 shadow-xl">
               <div className="flex items-center justify-between border-b border-zinc-200 bg-zinc-50 px-5 py-4 rounded-t-2xl">
                 <div className="text-base font-semibold text-black">
@@ -870,7 +889,11 @@ export function ReportTableClient() {
                     paginatedRows.map((row, idx) => (
                       <tr
                         key={`${row.id ?? row.borrowID ?? idx}-${idx}`}
-                        className="bg-white hover:bg-zinc-50/80 transition-colors"
+                        className={
+                          isOverdue(row)
+                            ? "bg-yellow-200 hover:bg-yellow-500/90 transition-colors"
+                            : "bg-white hover:bg-zinc-50/80 transition-colors"
+                        }
                       >
                         <td className="px-5 py-3.5 font-mono text-xs text-zinc-600">
                           {(safePage - 1) * pageSize + idx + 1}

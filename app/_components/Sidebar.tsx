@@ -119,7 +119,10 @@ export function Sidebar() {
     >
       <div className="flex h-16 items-center justify-between px-4">
         <div className={collapsed ? "mx-auto" : ""}>
-          <img src="https://ik.imagekit.io/df125g9cz/Logo%20CRETIVOX/svgviewer-png-output.png" className={collapsed ? "hidden" : "block"}/>
+          <img
+            src="https://ik.imagekit.io/df125g9cz/Logo%20CRETIVOX/svgviewer-png-output.png"
+            className={collapsed ? "hidden" : "block"}
+          />
         </div>
         <button
           type="button"
@@ -198,7 +201,10 @@ export function Sidebar() {
                   onClick={() => {
                     if (collapsed) {
                       setCollapsed(false);
-                      setOpenGroups((prev) => ({ ...prev, [item.label]: true }));
+                      setOpenGroups((prev) => ({
+                        ...prev,
+                        [item.label]: true,
+                      }));
                       return;
                     }
                     setOpenGroups((prev) => ({
@@ -269,29 +275,37 @@ export function Sidebar() {
         </ul>
 
         {/* Logout button at the bottom */}
-        <button
-          type="button"
-          onClick={handleLogout}
-          className={[
-            "mt-4 flex w-full items-center gap-3 rounded-md px-3 py-1 text-sm transition-colors",
-            "text-white  hover:text-white bg-black hover:bg-gray-500",
-            collapsed ? "justify-center px-2" : "",
-          ].join(" ")}
-        >
-          <span
+        <div>
+          <button
+            type="button"
+            onClick={handleLogout}
             className={[
-              "grid h-9 w-9 place-items-center rounded-md",
-              "text-white group-hover:text-red-700",
+              "mt-4 flex w-full items-center gap-3 rounded-md px-3 py-1 text-sm transition-colors",
+              "text-white  hover:text-white bg-black hover:bg-gray-500",
+              collapsed ? "justify-center px-2" : "",
             ].join(" ")}
           >
-            <LogOut className="h-5 w-5" />
-          </span>
+            <span
+              className={[
+                "grid h-9 w-9 place-items-center rounded-md",
+                "text-white group-hover:text-red-700",
+              ].join(" ")}
+            >
+              <LogOut className="h-5 w-5" />
+            </span>
+            {!collapsed && (
+              <span className="min-w-0 flex-1 truncate font-medium">
+                Logout
+              </span>
+            )}
+          </button>
           {!collapsed && (
-            <span className="min-w-0 flex-1 truncate font-medium">Logout</span>
+            <p className="text-xs text-black text-center mt-3 ">
+              Powered by <span className="font-bold italic">CRETECH</span>
+            </p>
           )}
-        </button>
+        </div>
       </nav>
     </aside>
   );
 }
-
