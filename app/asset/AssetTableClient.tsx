@@ -218,7 +218,7 @@ export function AssetTableClient() {
         {/* Actions bar */}
         <div className="mb-4 flex flex-wrap items-center gap-4 rounded-xl px-2 py-2 justify-between">
           <div className="flex flex-wrap items-center gap-3">
-            <div className="relative flex-1 min-w-[200px] max-w-60 -ml-1.5">
+            <div className="relative flex-1 min-w-50 max-w-60 -ml-1.5">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
               <Input
                 type="search"
@@ -232,7 +232,7 @@ export function AssetTableClient() {
               value={conditionFilter || "all"}
               onValueChange={(v) => setConditionFilter(v === "all" ? "" : v)}
             >
-              <SelectTrigger className="w-[180px] rounded-lg border border-zinc-300 bg-white">
+              <SelectTrigger className="w-45 rounded-lg border border-zinc-300 bg-white">
                 <SelectValue placeholder="Condition" />
               </SelectTrigger>
               <SelectContent>

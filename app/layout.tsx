@@ -17,6 +17,9 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Asset Management Dashboard",
+  icons: {
+    icon: "https://ik.imagekit.io/df125g9cz/Logo%20CRETIVOX/svgviewer-png-output.png",
+  },
 };
 
 export default function RootLayout({
