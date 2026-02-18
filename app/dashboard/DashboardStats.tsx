@@ -168,7 +168,13 @@ export function DashboardStats() {
           0,
         );
         const overdueQty = borrows.reduce(
-          (sum, b) => (isOverdue(b.return_date) ? sum + parseQty(b.qty) : sum),
+          (sum, b) => {
+            const status = String(b.status ?? "").toLowerCase();
+            const isActive = status === "active";
+            return isOverdue(b.return_date) && isActive
+              ? sum + parseQty(b.qty)
+              : sum;
+          },
           0,
         );
         const maintenanceQty = assets
@@ -335,14 +341,15 @@ export function DashboardStats() {
           );
         })}
       </div>
-
+      
+      {/* Donut Status & P */}
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-          <h2 className="mb-4 text-sm font-medium text-zinc-700 dark:text-zinc-300">
-            Status Asset
+        <div className="rounded-lg border border-b-4 border-gray-300 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950 ">
+          <h2 className="mb-4 text-sm font-bold text-zinc-700 dark:text-zinc-300">
+            Asset Status
           </h2>
           {loading ? (
-            <div className="flex h-70 items-center justify-center text-sm text-zinc-500">
+            <div className="flex h-70 items-center justify-center text-sm text-zinc-500 ">
               Memuat…
             </div>
           ) : hasChartData ? (
@@ -352,7 +359,6 @@ export function DashboardStats() {
                   data={pieData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={60}
                   outerRadius={90}
                   paddingAngle={2}
                   dataKey="value"
@@ -380,9 +386,9 @@ export function DashboardStats() {
           )}
         </div>
 
-        <div className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-          <h2 className="mb-4 text-sm font-medium text-zinc-700 dark:text-zinc-300">
-            Status Pengembalian
+        <div className="rounded-lg border border-b-4 border-gray-300 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950 ">
+          <h2 className="mb-4 text-sm font-bold text-zinc-700 dark:text-zinc-300">
+            Return Status
           </h2>
           {loading ? (
             <div className="flex h-70 items-center justify-center text-sm text-zinc-500">

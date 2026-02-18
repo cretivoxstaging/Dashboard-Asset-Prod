@@ -6,7 +6,7 @@ export default function DashboardPage() {
       <div>
         <h1 className="text-xl font-semibold tracking-tight">Dashboard</h1>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Ringkasan aplikasi Asset Management.
+          Asset Management Application Summary
         </p>
       </div>
 
